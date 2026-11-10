@@ -348,20 +348,23 @@ getDR(ASL *asl, int jv)
 		}
 	D = new_DerrMblock(&asl->i, L);
  have_D:
-	if (!R) {
-		R = (DerrRecord*)(D->mblast - L);
-		D->mblast = (char*)R;
-		}
+	/* Always use a fresh record: an existing D->R[k] (with larger jv) */
+	/* may be shared with other slots via the cv_index loop below.     */
+	/* busy[] has room for nlc + nlo entries, so add k only once.      */
+	if (!D->R[k])
+		D->busy[D->nbusy++] = k;
+	R = (DerrRecord*)(D->mblast - L);
+	D->mblast = (char*)R;
 	D->R[k] = R;
-	D->busy[D->nbusy++] = k;
 	if ((R->dv = i = cv_index)) {
+		/* error in defined variable i-1: mark the slots that may use it */
 		j = 0;
 		je = nlc + nlo;
 		if (i > comb) {
 			if (i <= combc)
-				je = nlc;
+				je = nlc;	/* used only in constraints */
 			else if (i <= ncom0)
-				j = combc;
+				j = nlc;	/* used only in objectives */
 			}
 		for(; j < je; ++j) {
 			if (!D->R[j]) {
